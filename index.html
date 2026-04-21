@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ResumeAI — Smart Resume Classifier</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c6af7;
+      --accent2: #f76ab4;
+      --accent3: #6af7c8;
+      --text: #eeeef5;
+      --muted: #7a7a99;
+      --radius: 16px;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 0%, rgba(124,106,247,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 90% 100%, rgba(247,106,180,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 60% at 50% 50%, rgba(106,247,200,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 60px 24px 80px;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 52px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(124,106,247,0.12);
+      border: 1px solid rgba(124,106,247,0.3);
+      color: #a99ffc;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      padding: 5px 12px;
+      border-radius: 99px;
+      margin-bottom: 20px;
+    }
+    .tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    h1 span {
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      animation: fadeUp 0.6s 0.15s ease both;
+    }
+
+    .field-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .field-label span {
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    #charCount {
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+      padding: 16px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    textarea:focus {
+      border-color: rgba(124,106,247,0.5);
+      box-shadow: 0 0 0 3px rgba(124,106,247,0.08);
+    }
+    textarea::placeholder { color: rgba(122,122,153,0.5); }
+
+    /* Example chips */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      padding: 5px 12px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(124,106,247,0.08);
+    }
+
+    /* Button */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      margin-top: 20px;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #5b52d6);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,106,247,0.35); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .btn.loading .spinner { display: block; }
+    .btn.loading .btn-text { display: none; }
+
+    /* Result */
+    #result {
+      margin-top: 24px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .result-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .result-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .result-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .result-category {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .confidence-badge {
+      background: rgba(106,247,200,0.1);
+      border: 1px solid rgba(106,247,200,0.2);
+      color: var(--accent3);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 99px;
+    }
+
+    /* Confidence bar */
+    .bar-section { margin-bottom: 6px; }
+    .bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      width: 0%;
+    }
+
+    /* Prob breakdown */
+    .breakdown {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .breakdown-title {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .prob-name {
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      color: var(--text);
+      width: 130px;
+      flex-shrink: 0;
+    }
+    .prob-bar-track {
+      flex: 1;
+      height: 5px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: var(--accent);
+      opacity: 0.5;
+      transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+      width: 0%;
+    }
+    .prob-bar-fill.top { opacity: 1; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+    .prob-pct {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      width: 44px;
+      text-align: right;
+    }
+
+    /* Error */
+    .error-msg {
+      background: rgba(247,106,107,0.08);
+      border: 1px solid rgba(247,106,107,0.2);
+      color: #f76a6b;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      margin-top: 16px;
+    }
+
+    /* Footer note */
+    .note {
+      margin-top: 28px;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: rgba(122,122,153,0.5);
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+    .note a { color: var(--accent); text-decoration: none; }
+
+    /* Animations */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="tag">AI-POWERED · ML CLASSIFIER</div>
+    <h1>Classify Any<br><span>Resume Instantly</span></h1>
+    <p class="subtitle">Paste resume text below and our ML model will predict<br>the job category with confidence scoring.</p>
+  </header>
+
+  <div class="card">
+    <div class="field-label">
+      <span>Resume Text</span>
+      <span id="charCount">0 chars</span>
+    </div>
+
+    <textarea id="txt" placeholder="Paste resume content here... e.g. skills, experience, technologies, job titles"></textarea>
+
+    <div class="chips">
+      <div class="chip" onclick="setExample('developer')">👨‍💻 Developer</div>
+      <div class="chip" onclick="setExample('designer')">🎨 Designer</div>
+      <div class="chip" onclick="setExample('datascience')">📊 Data Scientist</div>
+      <div class="chip" onclick="setExample('manager')">📋 Manager</div>
+      <div class="chip" onclick="setExample('hr')">👥 HR</div>
+      <div class="chip" onclick="setExample('marketing')">📣 Marketing</div>
+    </div>
+
+    <button class="btn" id="classifyBtn" onclick="classify()">
+      <div class="spinner"></div>
+      <span class="btn-text">⚡ Classify Resume</span>
+    </button>
+  </div>
+
+  <div id="result"></div>
+
+  <p class="note">Backend must be running at <a href="#">localhost:5000</a> · Run <code>python app.py</code> after training</p>
+
+</div>
+
+<script>
+  const examples = {
+    developer: "Full stack developer with expertise in Python, Django REST API, React, TypeScript, Node.js, PostgreSQL, Docker, and Kubernetes. Strong background in CI/CD pipelines, microservices, and cloud deployments on AWS.",
+    designer: "UI/UX Designer skilled in Figma, Adobe XD, Illustrator, and Photoshop. Experienced in user research, wireframing, prototyping, design systems, usability testing, and accessibility standards.",
+    datascience: "Data Scientist proficient in Python, pandas, NumPy, scikit-learn, TensorFlow, PyTorch, and SQL. Experienced in machine learning, deep learning, NLP, feature engineering, and data visualization with Tableau.",
+    manager: "Project Manager with 8 years of experience in team leadership, stakeholder communication, Agile/Scrum methodology, roadmap planning, risk management, budgeting, and KPI tracking across cross-functional teams.",
+    hr: "HR Specialist focused on talent acquisition, employee onboarding, payroll management, compliance, performance reviews, HR analytics, HRIS systems, and driving organizational development initiatives.",
+    marketing: "Digital Marketing Manager with expertise in SEO, Google Ads, PPC campaigns, content marketing, social media strategy, email marketing, lead generation, and data-driven brand awareness campaigns."
+  };
+
+  const txt = document.getElementById('txt');
+  txt.addEventListener('input', () => {
+    document.getElementById('charCount').textContent = txt.value.length + ' chars';
+  });
+
+  function setExample(key) {
+    txt.value = examples[key];
+    txt.dispatchEvent(new Event('input'));
+    txt.focus();
+  }
+
+  async function classify() {
+    const text = txt.value.trim();
+    if (!text) { showError("Please paste some resume text first."); return; }
+    if (text.length < 10) { showError("Text is too short. Add more details."); return; }
+
+    const btn = document.getElementById('classifyBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    document.getElementById('result').innerHTML = '';
+
+    try {
+      const res = await fetch("http://127.0.0.1:5000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Server error " + res.status);
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      showResult(data);
+
+    } catch (e) {
+      if (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed')) {
+        showError("Cannot connect to backend. Make sure <strong>python app.py</strong> is running on port 5000.");
+      } else {
+        showError(e.message);
+      }
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+  }
+
+  function showResult(data) {
+    const conf = data.confidence !== null ? data.confidence : null;
+    const probs = data.probabilities || {};
+
+    let probHTML = '';
+    if (Object.keys(probs).length > 0) {
+      const sorted = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+      const top = sorted[0][0];
+      probHTML = `
+        <div class="breakdown">
+          <div class="breakdown-title">Category Breakdown</div>
+          ${sorted.map(([cat, pct]) => `
+            <div class="prob-row">
+              <div class="prob-name">${cat}</div>
+              <div class="prob-bar-track">
+                <div class="prob-bar-fill ${cat === top ? 'top' : ''}" data-w="${pct}"></div>
+              </div>
+              <div class="prob-pct">${pct}%</div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+
+    document.getElementById('result').innerHTML = `
+      <div class="result-card">
+        <div class="result-row">
+          <div>
+            <div class="result-label">Predicted Category</div>
+            <div class="result-category">${data.category}</div>
+          </div>
+          ${conf !== null ? `<div class="confidence-badge">✓ ${conf}% confident</div>` : ''}
+        </div>
+        ${conf !== null ? `
+          <div class="bar-section">
+            <div class="bar-label"><span>Confidence</span><span>${conf}%</span></div>
+            <div class="bar-track"><div class="bar-fill" id="mainBar" data-w="${conf}"></div></div>
+          </div>` : ''}
+        ${probHTML}
+      </div>`;
+
+    // Animate bars
+    requestAnimationFrame(() => {
+      document.querySelectorAll('[data-w]').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+  }
+
+  function showError(msg) {
+    document.getElementById('result').innerHTML = `<div class="error-msg">⚠️ ${msg}</div>`;
+  }
+</script>
+</body>
+</html>
