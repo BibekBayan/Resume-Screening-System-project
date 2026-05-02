@@ -1,4 +1,4 @@
-# Resume-Screening-System-project
+# Resume-Screening-System
 📄🤖 Resume Screening System (NLP + Naive Bayes)
 
 The Resume Screening System is an intelligent application 💡 that automates candidate shortlisting 📑➡️✅. Traditional screening is slow ⏳ and biased ❌, so this system uses NLP 🧠 and Naive Bayes 📊 to analyze and categorize resumes efficiently.
